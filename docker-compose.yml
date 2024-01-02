@@ -1,0 +1,56 @@
+version: "3"
+
+services:
+  webserver:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    ports:
+      - "8888:80"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx.user.conf:/etc/nginx/conf.d/user.conf
+      - ./docker/nginx.company.conf:/etc/nginx/conf.d/company.conf
+      - ./docker/nginx.admin.conf:/etc/nginx/conf.d/admin.conf
+
+  app:
+    build:
+      context: .
+      dockerfile: php.dockerfile
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      - db
+    #   - redis
+  worker:
+    build:
+      context: ./php-worker
+    profiles: ["worker"]
+    volumes:
+      - ./:/var/www/html
+      - ./php-worker/supervisord.d:/etc/supervisord.d
+    depends_on:
+      - db
+    #   - redis
+#   redis:
+#     image: redis:alpine
+#     volumes:
+#       - ./data/redis:/data
+#     ports:
+#       - "16379:6379"
+
+  db:
+    container_name: rating_db
+    image: mysql:8.0.26
+    restart: unless-stopped
+    ports:
+      - "3310:3306"
+    environment:
+      MYSQL_DATABASE: homestead
+      MYSQL_USER: homestead
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: secret
+    volumes:
+      - ./rating_db_mysql:/var/lib/mysql/
+
+volumes:
+  rating_db_mysql:
